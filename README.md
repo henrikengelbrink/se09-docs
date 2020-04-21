@@ -62,23 +62,13 @@ Furthemore Ambassador is also terminating TLS. Therefore it is using the cert-ma
 ## Ory Oathkeeper
 Ory Oathkeeper is a cloud-native identity & access proxy which is written in Go and completely open source. All incoming API requests for the backend (*https://api.engelbrink.dev* ) are routed from Ambassador Edge Stack to Ory Oathkeeper. Based on a [JSON configuration file](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/oathkeeper-rules.json) Ory Oathkeeper routes the traffic to the corresponding service. The configuration file defines each route and furthermore you can configure authentification, authorization and mutators for each route. 
 
-By using Ory Oathkeeper there is only a single point where all the API endpoints are made public and secure. Every new endpoint needs to be explicitly defined in the configuration which eliminates the danger of publishing endpoint accidentially. Furthermore the authentification and authorization only needs to be implemented in Ory Oathkeeper and not in every single service. This reduces complexity and makes it easier to keep an overview of the entire backend and all public routes.
+By using Ory Oathkeeper there is only a single point where all the API endpoints are made public and secure. Every new endpoint needs to be explicitly defined in the configuration which eliminates the danger of publishing endpoint accidentially. Furthermore the authentification and authorization only needs to be implemented in Ory Oathkeeper and not in every single service. This reduces complexity and makes it easier to keep an overview of the entire backend and all public routes. The points authentification and authorization will be explained under *Application security* in a more detailed way.
 
 ## VPN to restrict access (DB/k8s)
 
 ## DNS security
 
-
-
-# IoT security
-
-## MQTT broker
-
-## Vault PKI / Public-key cryptography
-
-## Encrypted firmware
-
-
+<br/><br/>
 
 # Application security
 
@@ -102,13 +92,23 @@ By using Ory Oathkeeper there is only a single point where all the API endpoints
 
 ## XSS
 
+<br/><br/>
 
+# IoT security
+
+## MQTT broker
+
+## Vault PKI / Public-key cryptography
+
+## Encrypted firmware
+
+<br/><br/>
 
 # Mobile security
 
 ## iOS keychain
 
-
+<br/><br/>
 
 # Database security
 
@@ -118,7 +118,7 @@ By using Ory Oathkeeper there is only a single point where all the API endpoints
 
 ## Fallback during outtages
 
-
+<br/><br/>
 
 # Monitoring
 
@@ -132,8 +132,12 @@ By using Ory Oathkeeper there is only a single point where all the API endpoints
 
 ## Auditing for PostgreSQL
 
+<br/><br/>
+
 # Improvements for the future:
 - Container scanning
+
+<br/><br/>
 
 # Useful links:
 - https://medium.com/@reuvenharrison/an-introduction-to-kubernetes-network-policies-for-security-people-ba92dd4c809d
