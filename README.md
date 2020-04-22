@@ -65,8 +65,45 @@ Ory Oathkeeper is a cloud-native identity & access proxy which is written in Go 
 By using Ory Oathkeeper there is only a single point where all the API endpoints are made public and secure. Every new endpoint needs to be explicitly defined in the configuration which eliminates the danger of publishing endpoint accidentially. Furthermore the authentification and authorization only needs to be implemented in Ory Oathkeeper and not in every single service. This reduces complexity and makes it easier to keep an overview of the entire backend and all public routes. The points authentification and authorization will be explained under *Application security* in a more detailed way.
 
 ## VPN to restrict access (DB/k8s)
+Some endpoints and services should not be available for everyone in public, for example the endpoint where we create new IoT devices in our device-service or the access the PostgreSQL cluster. For these use-cases I have setup an OpenVPN server at DigitalOcean and the endpoint for creating devices (tbd.) and the [PostgreSQL cluster](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L2_InfrastructureConfig/db.tf#L29-L33) are only accessible through the VPN. This reduces the risk of unauthorized access to these resources.
 
-## DNS security
+## DNS security / TLS
+
+In order to increase the DNS security I've implemented and configured the following things:
+
+### Add CAA record
+CAA (Certificate Authority Authorization) records specify which certificate authorities are permitted to issue certificates for a specific domain. They help to reduce the risk of unintended certificate mis-issue.
+
+### Only TLS v1.2 and v1.3
+The Ambassador Edge Stack only supports TLS v1.2 and TLS v1.3 and older versions are not supported, because they are not considered secure enough anymore.
+
+### Specific cipher suites
+In general cipher suites describe which algorithms are used to encrypt network communication between clients. In TLS version up to 1.2 these algorithm sets were defined for key exchange, block cipher and message authentification. In TLS 1.3 a lot of legacy algorithms were dropped out and the strucutre changed a little bit which results in an even more secure protocol. By default, the Ambassador Edge Stack supports a lot of cipher suites including some which are considered insecure. In order to increase the security I only allow one of the following cipher suites:
+
+TLS 1.2
+- TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+- TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+- TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+
+TLS 1.3
+- TLS_AES_128_GCM_SHA256
+- TLS_AES_256_GCM_SHA384
+- TLS_CHACHA20_POLY1305_SHA256
+
+
+- https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
+
+### HTTP Strict Transport Security (HSTS)
+HSTS is a mechanism which helps to mitigate man-in-the-middle attacks in network communication. HSTS means that the server sends an additional header to the client which inform the client that only encrypted HTTPS connections are allowed.
+
+### Domain Name System Security Extensions (DNSSEC)
+DNSSEC is a list of different standards which helps to increase the DNS security by enusring authenticity and integrity of the DNS sources. Unfortuentely DigitalOcean doesn't provide these functionalities, so if this would be an obligatory measure for the project it is necessary to change the cloud provider.
+
+<br>
+All of these steps helped me to increase the DNS/TLS security which results in a A+ ranking at SSLLabs:
+
+![ssl.png](ssl.png "SSLLabs result")
+
 
 <br/><br/>
 
@@ -105,6 +142,8 @@ By using Ory Oathkeeper there is only a single point where all the API endpoints
 <br/><br/>
 
 # Mobile security
+
+## AppAuth
 
 ## iOS keychain
 
