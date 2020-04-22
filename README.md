@@ -90,9 +90,6 @@ TLS 1.3
 - TLS_AES_256_GCM_SHA384
 - TLS_CHACHA20_POLY1305_SHA256
 
-
-- https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
-
 ### HTTP Strict Transport Security (HSTS)
 HSTS is a mechanism which helps to mitigate man-in-the-middle attacks in network communication. HSTS means that the server sends an additional header to the client which inform the client that only encrypted HTTPS connections are allowed.
 
@@ -103,6 +100,8 @@ DNSSEC is a list of different standards which helps to increase the DNS security
 All of these steps helped me to increase the DNS/TLS security which results in a A+ ranking at SSLLabs:
 
 ![ssl.png](ssl.png "SSLLabs result")
+
+- https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
 
 
 <br/><br/>
