@@ -1,6 +1,8 @@
 # se09-docs
 
-This repository contains all information about my IoT project for the SE09 module. The project is a base setup for an IoT application where users can control their smart devices via an smartphone app. Furthermore all logs/events from each IoT device are stored into a database.
+This repository contains all information about my IoT project for the SE09 module. The project is a base setup for an IoT application where users can control their smart devices via an smartphone app. Furthermore all logs/events from each IoT device should be stored into a database. A user can can signup & login via the iOS app. After that he can claim an IoT device (washing machine) and configure it to connect to his local Wifi via the iOS app. After that his device is connected to the MQTT broker and he can change settings/read status of the device with his smartphone via MQTT.
+
+In the future it should also be possible that service technicans can get access to data of the devices of their customers to to remote maintenance. This needs to be allowed explicitly by the owner of the device.
 
 ## List of repos
 - [user-service](https://github.com/henrikengelbrink/se09-user-service)
@@ -12,7 +14,6 @@ This repository contains all information about my IoT project for the SE09 modul
 - [hibp-service](https://github.com/henrikengelbrink/se09-hibp-check)
 - [iot-device](https://github.com/henrikengelbrink/se09-iot-device)
 
-
 ## Architecture
 
 ![architecture.png](architecture.png "Architecture")
@@ -21,9 +22,6 @@ This repository contains all information about my IoT project for the SE09 modul
 ## Threat modelling
 
 Table of all possible threats/attack vectors can be found here: https://airtable.com/embed/shr0tufoYRPPDTZJf?backgroundColor=red&viewControls=on
-
-<iframe class="airtable-embed" src="https://airtable.com/embed/shr0tufoYRPPDTZJf?backgroundColor=red&viewControls=on" frameborder="0" onmousewheel="" width="100%" height="533" style="background: transparent; border: 1px solid #ccc;"></iframe>
-
 
 # Kubernetes security
 Kubernetes is the biggest container orchestration tool out there and it is used by a lot of companies from small startups to huge enterprise. Nevertheless, the default configuration of Kubernetes is pretty insecure. In the following I will explain possibilities to increase security of Kubernetes.
@@ -60,9 +58,9 @@ The Ambassador Edge Stack is one of many possible solutions for Kubernetes API g
 Furthemore Ambassador is also terminating TLS. Therefore it is using the cert-manager and Let's Enrypt to autmatically provision and update TLS certificates for all domains. Through TLS the entire communication via HTTPS between the clients and the server is encrypted.
 
 ## Ory Oathkeeper
-Ory Oathkeeper is a cloud-native identity & access proxy which is written in Go and completely open source. All incoming API requests for the backend (*https://api.engelbrink.dev* ) are routed from Ambassador Edge Stack to Ory Oathkeeper. Based on a [JSON configuration file](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/oathkeeper-rules.json) Ory Oathkeeper routes the traffic to the corresponding service. The configuration file defines each route and furthermore you can configure authentification, authorization and mutators for each route. 
+Ory Oathkeeper is a cloud-native identity & access proxy which is written in Go and completely open source. All incoming API requests for the backend (*https://api.engelbrink.dev* ) are routed from Ambassador Edge Stack to Ory Oathkeeper. Based on a [JSON configuration file](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/oathkeeper-rules.json) Ory Oathkeeper routes the traffic to the corresponding service. The configuration file defines each route and furthermore you can configure authentication, authorization and mutators for each route. 
 
-By using Ory Oathkeeper there is only a single point where all the API endpoints are made public and secure. Every new endpoint needs to be explicitly defined in the configuration which eliminates the danger of publishing endpoint accidentially. Furthermore the authentification and authorization only needs to be implemented in Ory Oathkeeper and not in every single service. This reduces complexity and makes it easier to keep an overview of the entire backend and all public routes. The points authentification and authorization will be explained under *Application security* in a more detailed way.
+By using Ory Oathkeeper there is only a single point where all the API endpoints are made public and secure. Every new endpoint needs to be explicitly defined in the configuration which eliminates the danger of publishing endpoint accidentially. Furthermore the authentication and authorization only needs to be implemented in Ory Oathkeeper and not in every single service. This reduces complexity and makes it easier to keep an overview of the entire backend and all public routes. The points authentication and authorization will be explained under *Application security* in a more detailed way.
 
 ## VPN to restrict access (DB/k8s)
 Some endpoints and services should not be available for everyone in public, for example the endpoint where we create new IoT devices in our device-service or the access the PostgreSQL cluster. For these use-cases I have setup an OpenVPN server at DigitalOcean and the endpoint for creating devices (tbd.) and the [PostgreSQL cluster](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L2_InfrastructureConfig/db.tf#L29-L33) are only accessible through the VPN. This reduces the risk of unauthorized access to these resources.
@@ -78,7 +76,7 @@ CAA (Certificate Authority Authorization) records specify which certificate auth
 The Ambassador Edge Stack only supports TLS v1.2 and TLS v1.3 and older versions are not supported, because they are not considered secure enough anymore.
 
 ### Specific cipher suites
-In general cipher suites describe which algorithms are used to encrypt network communication between clients. In TLS version up to 1.2 these algorithm sets were defined for key exchange, block cipher and message authentification. In TLS 1.3 a lot of legacy algorithms were dropped out and the strucutre changed a little bit which results in an even more secure protocol. By default, the Ambassador Edge Stack supports a lot of cipher suites including some which are considered insecure. In order to increase the security I only allow one of the following cipher suites:
+In general cipher suites describe which algorithms are used to encrypt network communication between clients. In TLS version up to 1.2 these algorithm sets were defined for key exchange, block cipher and message authentication. In TLS 1.3 a lot of legacy algorithms were dropped out and the strucutre changed a little bit which results in an even more secure protocol. By default, the Ambassador Edge Stack supports a lot of cipher suites including some which are considered insecure. In order to increase the security I only allow one of the following cipher suites:
 
 TLS 1.2
 - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -102,19 +100,40 @@ All of these steps helped me to increase the DNS/TLS security which results in a
 ![ssl.png](ssl.png "SSLLabs result")
 
 - https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
-
+- https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices
 
 <br/><br/>
 
 # Application security
 
-## OAuth 2.0 Authorization Code Flow with PKSE
+## Authentication through Oathkeeper & Hydra
 
-## Ory Hydra + user services for tokens
+### OAuth2.0 protocol (Authorization Code Flow with PKSE for iOS)
+Authentication for the entire system is based on the OAuth2 protocol. The OAuth2 protocol offers different types of grants which deliver the access token to the client. Depending on the client type there are different ways to handle to access token exchange. I decided to use the Authorization Code Flow with PKSE because the user is interacting via the native iOS app and this flow is the most secure for a native smartphone app. 
 
-## Authentification through Oathkeeper & Hydra
+During the Authorization Code Flow, the client is generating a secure random code verifier and a hashed code challenge. The code challenge is put into an request which is send to the authenticaion server to initialze the authentication session. The authenticaion server persists the code challenge, the requested audience and the client identifier for the life time of the login session. After that, the authenticaion server redirects the user an web-based user interface where he can enter his credentials. By submitting the login form in the UI, the user sends the entered credentials back to the authenticaion server where the credentials are verified. If the credentials are valid, the user is redirected to the redirect uri with the authroization code in the URL. The client app uses this authorization code and the code verifier to request the tokens from the authentication server. These tokens can then be used to access some API's.
 
-## Authorization still done in application (Ory Keto for ACL's in the future)
+The authentication flow I'm using at the moment is not entirely OAuth2 compliant because I'm skipping the consent provider flow, where the users is authorizing each aplication specifc access to his data. I've done this, because in the beginning it's only my service who is accessing the data and if a user want to signup/login into my application, he already showed the intention to provide his data. In the future I'm planning to integrate with other services or give access to other third parties and in this case the consent provider needs to be included into the flow.
+
+### Ory Hydra
+The entire OAuth2 is pretty complex and implementing every detail by yourself requires a lot of knowledge and time and even the smallest problem can cause huge vulnerability issues. For this reason, I decided to use an already existing solution. There are a lot of possibilites out there, e.g. SaaS solutions like Auth0 and Okta or open source projects like KeyCloak or Ory Hydra. I decided not to choose a proprietary SaaS because this results in a vendor lock-in. 
+
+During my research, I found some open source projects which are offering solutions for Identity and Access Management (IAM) but most of them were complex to configure and setup and others were not realy cloud native. Fortunately, I've found the Ory project and they offer four different solutions in the space of IAM which are easy to configure and completely cloud native. I've decided to go with Ory Hydra which is a OAuth2 and OpenID Connect server for secure access to applications and API's. All the heavy work like verifiying codes/challenges and issuing tokens are done by Hydra, only the user management itself needs to be done by yourself. They are also offering a solution for this, Ory Kratos, but it wasn't out of beta when I started the project, so I decided to implement the user management by myself.
+
+### User-service
+Thre user-service itself is a Kotlin application using the Micronaut framework. All the user data is stored in a Postgres database. The user-service has two major functionalities. The first part is serving the HTML files which are shown to the user during registration/login. The second part are the logic to store users and their credentials encrypted in the database and verify user-entered credentials during the login. Therefore, the user-service is closely connected to the Hydra service and during every signup/login there is a lot of communication between Ory Hydra and the user-service.
+
+### Ory Oathkeeper
+Every incoming request to any API is going through the Ory Oathkeeper proxy. Every API route is defined in the [JSON configuration file](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/oathkeeper-rules.json). If a specific route is only accessible for authenticated users, Ory Oathkeeper checks whether the request contains the authorization header with the Token and if this is the case, it validates the token by calling the introspect endpoint of Ory Hydra. This functionality is easyily configureable in the config file, which is a huge benefit of the Ory project.
+
+![AuthFlow_UML.png](AuthFlow_UML.png "Authentication flow")
+
+## Authorization
+Besides authentication, authorization is a important point in application security. Authentication is used to make sure that a requesting user is known and validated by my system, whereas authorization is checking whether the user who requests some resource is allowed to access this specific resource. It is a common problem in applications, that it's possible to get access to resources of other users in cause of bugs in the authorization process.
+
+At the moment I've implemented the authorization logic into each service I've implemented. For example if an authenticated user is requesting data for a specific device at *i*/devices/device-id-abc-123*i*, I'm explicitly checking whether the user is the owner of the device. By implementing this for every single endpoint explicitly, it's very easy to make mistakes and forget about this, which immediately results in an vulnerability. Writing tests can help to prevent deploying these vulnerabilities to a production system, but it's still possible.
+
+A better solution would be to use a specific access control server which is connected to the Ory Oathkeeper proxy to automatically check these things for every incoming request. This will result into one single service where all the configurations need to be implemented. The Ory project is offering a service called Keto for this, but it is still in beta status and a lot of functionalities are still missing, but in the future this would be the way I would handle authorization. Keto is supposed to use access control patterns like Role-Based-Access-Control (RBAC), Attribute-Based-Access-Control (ABAC) or Access-Control-Lists (ACL).
 
 ## bcrypt for salted and encrypted passwords
 
@@ -179,7 +198,7 @@ All of these steps helped me to increase the DNS/TLS security which results in a
 
 # Useful links:
 - https://medium.com/@reuvenharrison/an-introduction-to-kubernetes-network-policies-for-security-people-ba92dd4c809d
-- https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices
+- 
 - https://www.nexusgroup.com/how-to-validate-certificates-in-iot-devices-5/
 - https://quarkus.io/guides/vault
 - https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine
