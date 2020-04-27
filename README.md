@@ -11,7 +11,7 @@ In the future it should also be possible that service technicans can get access 
 - [infrastructure](https://github.com/henrikengelbrink/se09_infrastructure)
 - [user-app](https://github.com/henrikengelbrink/se09-user-app)
 - [docker-images](https://github.com/henrikengelbrink/se09-docker-images)
-- [hibp-service](https://github.com/henrikengelbrink/se09-hibp-check)
+- [hibp-service](https://github.com/henrikengelbrink/se09-docker-images/tree/master/hibp)
 - [iot-device](https://github.com/henrikengelbrink/se09-iot-device)
 
 ## Architecture
@@ -22,6 +22,9 @@ In the future it should also be possible that service technicans can get access 
 ## Threat modelling
 
 Table of all possible threats/attack vectors can be found here: https://airtable.com/embed/shr0tufoYRPPDTZJf?backgroundColor=red&viewControls=on
+
+## General principles
+!!! TODO
 
 # Kubernetes security
 Kubernetes is the biggest container orchestration tool out there and it is used by a lot of companies from small startups to huge enterprise. Nevertheless, the default configuration of Kubernetes is pretty insecure. In the following I will explain possibilities to increase security of Kubernetes.
@@ -118,7 +121,7 @@ The authentication flow I'm using at the moment is not entirely OAuth2 compliant
 ### Ory Hydra
 The entire OAuth2 is pretty complex and implementing every detail by yourself requires a lot of knowledge and time and even the smallest problem can cause huge vulnerability issues. For this reason, I decided to use an already existing solution. There are a lot of possibilites out there, e.g. SaaS solutions like Auth0 and Okta or open source projects like KeyCloak or Ory Hydra. I decided not to choose a proprietary SaaS because this results in a vendor lock-in. 
 
-During my research, I found some open source projects which are offering solutions for Identity and Access Management (IAM) but most of them were complex to configure and setup and others were not realy cloud native. Fortunately, I've found the Ory project and they offer four different solutions in the space of IAM which are easy to configure and completely cloud native. I've decided to go with Ory Hydra which is a OAuth2 and OpenID Connect server for secure access to applications and API's. All the heavy work like verifiying codes/challenges and issuing tokens are done by Hydra, only the user management itself needs to be done by yourself. They are also offering a solution for this, Ory Kratos, but it wasn't out of beta when I started the project, so I decided to implement the user management by myself.
+During my research, I found some open source projects which are offering solutions for Identity and Access Management (IAM) but most of them were complex to configure and setup and others were not realy cloud native. Fortunately, I've found the [Ory project](https://www.ory.sh/) and they offer four different solutions in the space of IAM which are easy to configure and completely cloud native. I've decided to go with Ory Hydra which is a OAuth2 and OpenID Connect server for secure access to applications and API's. All the heavy work like verifiying codes/challenges and issuing tokens are done by Hydra, only the user management itself needs to be done by yourself. They are also offering a solution for this, Ory Kratos, but it wasn't out of beta when I started the project, so I decided to implement the user management by myself.
 
 ### User-service
 Thre user-service itself is a Kotlin application using the Micronaut framework. All the user data is stored in a Postgres database. The user-service has two major functionalities. The first part is serving the HTML files which are shown to the user during registration/login. The second part are the logic to store users and their credentials encrypted in the database and verify user-entered credentials during the login. Therefore, the user-service is closely connected to the Hydra service and during every signup/login there is a lot of communication between Ory Hydra and the user-service.
@@ -126,26 +129,57 @@ Thre user-service itself is a Kotlin application using the Micronaut framework. 
 ### Ory Oathkeeper
 Every incoming request to any API is going through the Ory Oathkeeper proxy. Every API route is defined in the [JSON configuration file](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/oathkeeper-rules.json). If a specific route is only accessible for authenticated users, Ory Oathkeeper checks whether the request contains the authorization header with the Token and if this is the case, it validates the token by calling the introspect endpoint of Ory Hydra. This functionality is easyily configureable in the config file, which is a huge benefit of the Ory project.
 
+<br/>
+
+**Detailed UML sequence diagram of the authentication flow:**
 ![AuthFlow_UML.png](AuthFlow_UML.png "Authentication flow")
 
 ## Authorization
 Besides authentication, authorization is a important point in application security. Authentication is used to make sure that a requesting user is known and validated by my system, whereas authorization is checking whether the user who requests some resource is allowed to access this specific resource. It is a common problem in applications, that it's possible to get access to resources of other users in cause of bugs in the authorization process.
 
-At the moment I've implemented the authorization logic into each service I've implemented. For example if an authenticated user is requesting data for a specific device at *i*/devices/device-id-abc-123*i*, I'm explicitly checking whether the user is the owner of the device. By implementing this for every single endpoint explicitly, it's very easy to make mistakes and forget about this, which immediately results in an vulnerability. Writing tests can help to prevent deploying these vulnerabilities to a production system, but it's still possible.
+At the moment I've implemented the authorization logic into each service I've implemented. For example if an authenticated user is requesting data for a specific device at */devices/device-id-abc-123*, I'm explicitly checking whether the user is the owner of the device. By implementing this for every single endpoint explicitly, it's very easy to make mistakes and forget about this, which immediately results in an vulnerability. Writing tests can help to prevent deploying these vulnerabilities to a production system, but it's still possible.
 
 A better solution would be to use a specific access control server which is connected to the Ory Oathkeeper proxy to automatically check these things for every incoming request. This will result into one single service where all the configurations need to be implemented. The Ory project is offering a service called Keto for this, but it is still in beta status and a lot of functionalities are still missing, but in the future this would be the way I would handle authorization. Keto is supposed to use access control patterns like Role-Based-Access-Control (RBAC), Attribute-Based-Access-Control (ABAC) or Access-Control-Lists (ACL).
 
-## bcrypt for salted and encrypted passwords
+## bcrypt for salted and hashed passwords
+It is a common problem that there are still applications and services which store password into the database in plaintext which means as soon a hacker get access to a database, he is able to read and use all the user passwords. Even if this is a problem since the beginning of the internet and every developer should know about this, you can read about data leaks with plaintext passwords weekly.
 
-## HIBP service
+I deciced to use the bcrypt algorithm to hash and salt the passwords I'm storing in the database with my user-service. Bcrypt is using a random and securely generated Salt which is added to the hash of the acutal password. This makes it impossible for the attacker to use Rainbow/lookup tables to crack the password. Furthemore bcrypt is using an algorithm which makes the hash-function slower. This makes brute forcing millions of passwords nearly impossible (until the hacker has a lot of computational power) because it would take too much time.
+
+- https://auth0.com/blog/hashing-in-action-understanding-bcrypt/
+
+## HaveIBeenPwned service
+The developer Troy Hunt started a project called [*HaveIBeenPwned*(https://haveibeenpwned.com/) where he basicaly collects data from password leaks. At the moment the project contains over 550 million leaked passwords. It is common that hacker are using data from prior leaks and use them to get access in other services with this data or they are using these very common passwords to brute force other services. As a developer you can use the data of *HaveIBeenPwned* and check every new user password against this data collection and if the new password of the user appears in *HaveIBeenPwned* you can tell him to use another password.
+
+I've downloaded the entire HIBP data as a CSV file, created an bloom filter out of it and implemented a REST API which uses this bloom filter to check if a password was already leaked. On every new user registration, [the user-service is checking](https://github.com/henrikengelbrink/se09-user-service/blob/master/src/main/kotlin/se09/user/service/services/UserService.kt#L29-L31) the password of the user with the [hibp-service](https://github.com/henrikengelbrink/se09-docker-images/tree/master/hibp).
+
+- https://haveibeenpwned.com/
+- https://github.com/willf/bloom
 
 ## SQL injections
+SQL injections are nothing I have to actively care about in this project because I'm using an ORM in all services that are using some SQL. I'm not writing any SQL statements because the ORM is building all the queries and it also takes care about escaping queries to prevent SQL injections.
 
-## CORS
+- https://owasp.org/www-community/attacks/SQL_Injection
 
-## CSRF
+## Cross-Origin Resource Sharing (CORS)
+CORS is way to restrict which web services with a different host can access your backend. By default, a web app like `https://example-a.com` can't reach a backend `https://api-b.com` because of the same origin policy which is applied. In order to allow a request like this, you have to define specific CORS header in the backend so that the web app is able to request data from the backend. At the moment I've only implemented the iOS app which is communicating to my backend services and there is no webapp which is running in a browser, so there is no need to define these CORS configurations. If this is going to change in the future, I would add these configurations in the Ambassador Edge Stack configuration. In this configuration I can define headers which should be added to each response which is going back to the client from the backend.
 
-## XSS
+- https://auth0.com/blog/cors-tutorial-a-guide-to-cross-origin-resource-sharing/
+- https://www.codecademy.com/articles/what-is-cors
+
+## Cross-Site-Request-Forgery (CSRF)
+As soon as the user logged into you application, you can store the login state into a cookie. This cookie is send with every request to the backend in order to authenticate the user so that he only needs to login once for a specific time range. This can be abused by an attacker. The attacker can implement his own site where he is executing an unintended request  from his site to your backend. This happens without the user knowing about it and because of the existing cookie, the request can potentially result in some (eval) changes in the backend. To prevent this kind of attack, you can add a CSRF token to every webpage which is additionally send with each request to the backend an then validated in the backend.
+
+At the moment I'm only using the iOS application and the internal UIWebView/WKWebView I'm using doesn't store any cookies and is totally sandboxed, so it's not possible that any third-party is executing unintended requests with some stored cookies.
+
+- https://auth0.com/docs/protocols/oauth2/mitigate-csrf-attacks
+
+## Cross-Site Scripting (XSS)
+XSS attacks are based on the fact, that an attacker is able to inject malicious code into a web application by executing for example JavaScript from input fields. To prevent these kind of attackes it's necessary to validate and escape every user input to be sure that no injected code is executed. 
+
+At the moment I'm only using the iOS application and the login/register views are handled by the AppAuth framework. The AppAuth framework is the only possibility to open these pages and it's not necessary for an attacker to inject some malicious inputs.
+
+- https://auth0.com/blog/developers-guide-to-common-vulnerabilities-and-how-to-prevent-them/#Cross-Site-Scripting--XSS-
 
 <br/><br/>
 
