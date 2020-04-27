@@ -186,6 +186,14 @@ At the moment I'm only using the iOS application and the login/register views ar
 # IoT security
 
 ## MQTT broker
+The communication with the Iot devices is handled via the MQTT protocol. MQTT is a protocol which is based on clients that publish/subscribe for specific topics at the MQTT broker which is the central element of the MQTT system where all messages are processed. I'm using the [VerneMQ](https://vernemq.com/) MQTT broker which is written in Erlang and completely open source.
+
+For every new IoT device I'm creating a certificate which is used to authenticate the client whenever he want's to connect to the broker. Furthermore, the client also needs to provide a valid password which is validated in the backend. When a new client connects to the MQTT broker, the broker is checking whether the client certificate is a valid certificate which matches the server certificate. This is handled on OSI layer 4. If the certificate is valid, the [broker sends a request](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/vernemq.tf#L45-L46) to the cert-service. The [cert-service](https://github.com/henrikengelbrink/se09-cert-service/blob/master/src/main/kotlin/se09/cert/service/controller/VerneMQController.kt#L21-L42) uses the credentials and validates the login with the [device-service](https://github.com/henrikengelbrink/se09-cert-service/blob/master/src/main/kotlin/se09/cert/service/ws/DeviceWebService.kt#L18-L30).
+
+The same procedure is also done for every publish/subscribe event. Additionally I'm checking whether the client is allowed to subscribe/publish to the specific login he tries to publish/subscribe.
+
+- https://www.hivemq.com/blog/mqtt-security-fundamentals-wrap-up/
+- https://docs.vernemq.com/plugindevelopment/webhookplugins
 
 ## Vault PKI / Public-key cryptography
 
@@ -240,7 +248,7 @@ At the moment I'm only using the iOS application and the login/register views ar
 - https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/
 - https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar/
 - http://medium.com/@dav009/terraform-sane-practices-project-structure-c4347c1bc0f1
-- https://www.hivemq.com/blog/mqtt-security-fundamentals-wrap-up/
+
 - https://medium.com/@ScottAmyx/managed-pki-certificates-one-step-at-a-time-toward-securing-the-iot-8b4c539c8ec
 - https://cloudinvent.com/blog/howto-hashicorp-vault-ca-pki-deployment/
 - https://dev.to/v6/vault-pki-secrets-engine-with-intermediate-signing-authority-hap
