@@ -16,7 +16,7 @@ In the future it should also be possible that service technicans can get access 
 
 ## Architecture
 
-![architecture.png](architecture.png "Architecture")
+![architecture.png](assets/architecture.png "Architecture")
 
 
 ## Threat modelling
@@ -56,7 +56,7 @@ Setting up Istio to use mutual TLS is pretty easy, you only have to install Isti
 
 # 2. Network security
 
-![network-inbound.png](network-inbound.png "Network inbound flow")
+![Network_flow.png](assets/Network_flow.png "Network inbound flow")
 
 ## 2.1 Cloud Firewall
 The infrastructure of this project is running on DigitalOcean. Every managed Kubernetes cluster at DigitalOcean comes automatically with an preconfigured Cloud Firewall which automatically blocks traffic for all ports to the Droplets (Nodes/VM's) except the ports which are necessary to run Kubernetes. The firewall is configured in a way that it only allows traffic which comes from the internal private cloud network of all nodes of the cluster. This cloud firewall prevents hacker to directly access any node of the Kubernetes cluster. All incoming traffic from outside is routed through the load balancer which is connected to the Ambassador Edge Stack service any Ory Oathkeeper.
@@ -106,7 +106,7 @@ DNSSEC is a list of different standards which helps to increase the DNS security
 <br>
 All of these steps helped me to increase the DNS/TLS security which results in a A+ ranking at SSLLabs:
 
-![ssl.png](ssl.png "SSLLabs result")
+![ssl.png](assets/ssl.png "SSLLabs result")
 
 - https://www.thesslstore.com/blog/cipher-suites-algorithms-security-settings/
 - https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices
@@ -138,7 +138,7 @@ Every incoming request to any API is going through the Ory Oathkeeper proxy. Eve
 <br/>
 
 **Detailed UML sequence diagram of the authentication flow:**
-![AuthFlow_UML.png](AuthFlow_UML.png "Authentication flow")
+![AuthFlow_UML.png](assets/AuthFlow_UML.png "Authentication flow")
 
 ## 3.2 Authorization
 Besides authentication, authorization is a important point in application security. Authentication is used to make sure that a requesting user is known and validated by my system, whereas authorization is checking whether the user who requests some resource is allowed to access this specific resource. It is a common problem in applications, that it's possible to get access to resources of other users in cause of bugs in the authorization process.
@@ -201,7 +201,7 @@ For every new IoT device I'm creating a certificate which is used to authenticat
 
 The same procedure is also done for every publish/subscribe event. In this routei, I'm additionally checking whether the client is allowed to subscribe/publish to the specific login he tries to publish/subscribe. This prevents that an authenticated users can access the device of someone else without being allowed to do this.
 
-![MQTT_Auth.png](MQTT_Auth.png "MQTT Authentication flow")
+![MQTT_Auth.png](assets/MQTT_Auth.png "MQTT Authentication flow")
 
 - https://www.hivemq.com/blog/mqtt-security-fundamentals-wrap-up/
 - https://docs.vernemq.com/plugindevelopment/webhookplugins
@@ -257,14 +257,19 @@ In order to prevent entire dataloss if the datacenter gets critial issues, I cou
 # 7. Monitoring
 
 ## 7.1 Sentry for crash reporting
+Sentry is a SaaS tool which lets you easily collect all crashes of your application. I'm only using it to collect exceptions of my backend services which are written in Kotlin, but they also offer SDK for other languages and platforms, so it would be also possible to monitor the iOS application.
 
-## 7.2 Collect logs with the Elastic stack
+Setting up Sentry for the Kotlin based services is pretty easy, I only have to [include the SDK in the `build.gradle`](https://github.com/henrikengelbrink/se09-user-service/blob/master/build.gradle#L37) file and provide the [environment variable `SENTRY_DSN`](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/user-service.tf#L74-L77) to authenticate the client. There are no further configurations necessary and every exception including the stacktrace will be automatically collected in their service. It is also possible to host the Sentry server in your own infrastructure but I'm currently using their SaaS solution.
 
-## 7.3 Collect metrics with Prometheus
+## 7.2 Application Performance Monitoring
 
-## 7.4 Traffic management with Kiali
+## 7.3 Collect logs with the Elastic stack
 
-## 7.5 Auditing for PostgreSQL
+## 7.4 Collect metrics with Prometheus
+
+## 7.5 Traffic management with Kiali
+
+## 7.6 Auditing for PostgreSQL
 
 <br/><br/>
 
