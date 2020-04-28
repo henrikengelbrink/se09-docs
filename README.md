@@ -33,13 +33,19 @@ Kubernetes is the biggest container orchestration tool out there and it is used 
 ## Network policies
 By default all pods in a namespace can communicate with each other, independent whether it is necessary or not. This is a security issue, because if one pod is vulnerable, it's possible to access all other pods. If we limit the network capabilities to the minimum, we can reduce the impact of one vulnerable pod. I'm blocking [all network connections between pods by default](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L2_InfrastructureConfig/k8s.tf#L11-L20) and enable them manually where it is necessary. The policies are automatically enforced by Kubernetes on layer 4 of the internal network. The entire configuration of all policies can be found [here](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/network-policies.tf).
 
-
 ## Pod security policies
 By default all pods in a Kubernetes cluster can start with root priviledges and as root user, even if it's not neccessary for these pods. If one of these pods is vulnerable, the attacker can get access to the entire k8s cluster. To prevent this, it is possible to define pod security policies for a Kubernetes cluster. These policies define some rules for pods which are started in the cluster, for example it is possible to define that pods cannot start in priviledged mode or as root user. I defined a [simple pod security policy](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/crds/psd.yml) which is preventing pods starting with priviledges or a root user. This is only a simple starting point and there are a lot of possible configurations available, but for the beginning this simple policy already helps to make the cluster more secure.
 
 - https://banzaicloud.com/blog/pod-security-policy/
 - https://docs.bitnami.com/kubernetes/how-to/secure-kubernetes-cluster-psp/
 
+## Secret management
+All the secrets/certificates that needs to be injected in some backend services are managed by Hashicorp Vault. Hashicorp Vault is a tool which is basically meant to store and protect sensitive data. All the secrets are encrypted and stored by Vault and automatically injected into the corresponding services by an agent which needs to be defined in the YML file of the deployment, [like in this config file for the VerneMQ MQTT broker](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/vernemq.tf#L56-L73). 
+
+Hashicorp Vault itself can be sealed/unsealed. In the sealed mode it is not possible to get any data from it. The unseal process is based on Shamir's Secret Sharing algorithm. The basic idea of this algorithm is to split an unseal secret into multple pieces and to unseal Vault you need for example three of five of these keys. I'm using the automatic unseal feature of Vault together with the Google Cloud Key Management Service where these additional keys are stored into Google Cloud and the seal/unseal process is automatically done by Vault.
+
+- https://www.vaultproject.io/docs/concepts/seal
+- https://learn.hashicorp.com/vault/operations/autounseal-gcp-kms
 
 ## Mutual TLS
 By default all the traffic between pods/services is not encrypted. Services meshes are one easy possibility to implement mutual TLS between all services. In general services meshes are adding another layer on top of Kubernetes. There are three bigger solutions for Kubernetes: [Linkerd](https://linkerd.io/), [Consul](https://www.consul.io/) and [Istio](https://istio.io/). All of them offer the possibility to implement mutual TLS, but I decided to use Istio because it also offers other functionalities which will be presented later in this document. 
@@ -192,12 +198,22 @@ For every new IoT device I'm creating a certificate which is used to authenticat
 
 The same procedure is also done for every publish/subscribe event. Additionally I'm checking whether the client is allowed to subscribe/publish to the specific login he tries to publish/subscribe.
 
+![MQTT_Auth.png](MQTT_Auth.png "MQTT Authentication flow")
+
 - https://www.hivemq.com/blog/mqtt-security-fundamentals-wrap-up/
 - https://docs.vernemq.com/plugindevelopment/webhookplugins
 
 ## Vault PKI / Public-key cryptography
+As described in the previous part, everty IoT device gets an certificate which is created in a backend service. The process of creating and signing all the certificates is very complex, so I decided to use an existing solutions for this. Hashicorp Vault which I'm already using for secret management in my Kubernetes cluster also offers the functionality of creating your own Public-Key-Infrastrucure (PKI). I've used this feature to setup my own PKI to handle the certificates for all the IoT devices. The certificates and keys are not stored in Vault, they are copied to the device and not persisted afterwards. The certificate for each device expires after one year and after that time, the certificate needs to be renewed. The new certificate will be updated by the device-service via the Over-the-Air-Update (OTA) with the firmware.
 
-## Encrypted firmware
+- https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine
+
+## IoT device
+I decided to use the ESP32 with Mongoose OS for the IoT device. Mongoose OS is open-source and it offers a lot of functionalities like OTA. The Over-the-Air-Updates are handled by the device-servie and whenever the device gets the message to update itself via MQTT, it is downloading the new firmware via a GET request from the device-service. 
+
+Mongoose OS offers the functionality to encrypt the firmware and all other files on the device. This prevents attackers to reverse engineer the device or steal credentials like the MQTT certificates from the device or manipulate the device, for example during the shipping process. The encryption needs to be enabled via the Mongoose OS CLI which creates and secret key file which is necessary for all future firmware updates. I've unfortunately not implemented this at the moment, but the plan is to store all these encryption keys for each device in Hashicorp Vault where the device-service can access them for future firmware updates.
+
+- https://mongoose-os.com/docs/mongoose-os/userguide/security.md
 
 <br/><br/>
 
