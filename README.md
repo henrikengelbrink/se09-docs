@@ -196,7 +196,7 @@ The communication with the Iot devices is handled via the MQTT protocol. MQTT is
 
 For every new IoT device I'm creating a certificate which is used to authenticate the client whenever he want's to connect to the broker. Furthermore, the client also needs to provide a valid password which is validated in the backend. When a new client connects to the MQTT broker, the broker is checking whether the client certificate is a valid certificate which matches the server certificate. This is handled on OSI layer 4. If the certificate is valid, the [broker sends a request](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/vernemq.tf#L45-L46) to the cert-service. The [cert-service](https://github.com/henrikengelbrink/se09-cert-service/blob/master/src/main/kotlin/se09/cert/service/controller/VerneMQController.kt#L21-L42) uses the credentials and validates the login with the [device-service](https://github.com/henrikengelbrink/se09-cert-service/blob/master/src/main/kotlin/se09/cert/service/ws/DeviceWebService.kt#L18-L30).
 
-The same procedure is also done for every publish/subscribe event. Additionally I'm checking whether the client is allowed to subscribe/publish to the specific login he tries to publish/subscribe.
+The same procedure is also done for every publish/subscribe event. In this routei, I'm additionally checking whether the client is allowed to subscribe/publish to the specific login he tries to publish/subscribe. This prevents that an authenticated users can access the device of someone else without being allowed to do this.
 
 ![MQTT_Auth.png](MQTT_Auth.png "MQTT Authentication flow")
 
@@ -220,8 +220,12 @@ Mongoose OS offers the functionality to encrypt the firmware and all other files
 # Mobile security
 
 ## AppAuth
+The entire authentication process with OAuth2/OpenID during login/registration in the iOS app is handled by the [AppAuth SDK](https://github.com/openid/AppAuth-iOS) which is offered by the [OpenID Foundation](https://openid.net/). I have not implemented anything of this by my own but I only stick to their SDK which seems the most secure solution because they are trusted and well known to be very good in OAuth2 and OpenID.
 
 ## iOS keychain
+All the tokens like access and refresh token which are requested from Ory Hydra to authenticate the user at my backend services are stored in the iOS keychain where they will be automatically encrypted by iOS itself. It is also not possible for other apps or attackers to access these credentials stored in the iOS keychain because every app is running in her own sandbox and there is no possibilty to reach credentials from another app from the keychain.
+
+- https://developer.apple.com/documentation/security/keychain_services
 
 <br/><br/>
 
@@ -251,6 +255,7 @@ Mongoose OS offers the functionality to encrypt the firmware and all other files
 
 # Improvements for the future:
 - Container scanning
+- 2FA with Authy from Twilio
 
 <br/><br/>
 
