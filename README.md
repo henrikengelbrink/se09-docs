@@ -220,7 +220,7 @@ As described in the previous part, everty IoT device gets an certificate which i
 - https://dev.to/v6/vault-pki-secrets-engine-with-intermediate-signing-authority-hap
 
 ## 4.3 IoT device
-I decided to use the ESP32 with Mongoose OS for the IoT device. Mongoose OS is open-source and it offers a lot of functionalities like OTA. The Over-the-Air-Updates are handled by the device-servie and whenever the device gets the message to update itself via MQTT, it is downloading the new firmware via a GET request from the device-service. 
+I decided to use the ESP32 with Mongoose OS for the IoT device. Mongoose OS is open source and it offers a lot of functionalities like OTA. The Over-the-Air-Updates are handled by the device-servie and whenever the device gets the message to update itself via MQTT, it is downloading the new firmware via a GET request from the device-service. 
 
 Mongoose OS offers the functionality to encrypt the firmware and all other files on the device. This prevents attackers to reverse engineer the device or steal credentials like the MQTT certificates from the device or manipulate the device, for example during the shipping process. The encryption needs to be enabled via the Mongoose OS CLI which creates and secret key file which is necessary for all future firmware updates. I've unfortunately not implemented this at the moment, but the plan is to store all these encryption keys for each device in Hashicorp Vault where the device-service can access them for future firmware updates.
 
@@ -277,11 +277,18 @@ The Elastic Stack is [deployed into Kubernetes using the official Helm charts](h
 By collecting all these logs it is for example possible to track all failed login attempts during a specific time period in order to recognize possible attacks against your system.
 
 ## 7.4 Collect metrics with Prometheus
+[Prometheus](https://prometheus.io/) is a monitoring system and a timeseries database which is used to monitor system metrics over time. It was developed at SoundClound and is open sourced in the Cloud Native Foundation. During the last years it became a de-facto standard when it comes to monitor metrics of backend services, this is a reason why nearly all bigger services/tools are delivered with prometheus endpoints where prometheus can periodically scrape all the metrics.
 
+Prometheus is automatically deployed with Istio and all Istio related metrics are automatically loaded into Prometheus. In the future I also want to put all the metrics of Ambassador, Ory Oathkeeper, Ory Hydra and VerneMQ into Prometheus. All the data which is scraped by Prometheus can be visualized with [Grafana](https://grafana.com/).
 
 ## 7.5 Traffic management with Kiali
+[Kiali](https://kiali.io/) is a open source service mesh observability tool which gives you an overview of all services that are running in your cluster. Furthermore it is possible to visualize the connections between different services and how they are communicating with each other. There are plenty other useful functionalites in Kiali but I had no time to dig deeper into it. Kiali is also automatically deployed as a part of Istio.
 
-## 7.6 Auditing for PostgreSQL
+## 7.6 Tracing with Jaeger
+[Jaeger](https://www.jaegertracing.io/) is a open source distributed tracing tool which allows you to trace single requests between different microservices running in your backend. Tracing can be really helpful if you're trying to debug your system and want to find bugs or misconfigurations. I only used the base functionalities of Jaeger which were deployed and configured with the default Istio deployment and I didn't had enough time to go deeper into Jaeger but it seems to be a very useful tool, espacially if you are running a lot of microservices in production.
+
+## 7.7 Auditing for PostgreSQL
+For debugging or incident investigation it can be really useful to get insights which queries are executed in your database. Furthermore, there are some legal regulations that forces you to run database audits like this where you can see who changed/accessed which data on which time. This can be either done via the application which is executing the queries or it is directly done by the database instance itself. In my case, I'm only using the simple SQL audit log which is delivered with the managed database of DigitalOcean but if I would going to run this project in production I would rather use a more advanced and configurable solution which is auditing the logs on application level.
 
 <br/><br/>
 
