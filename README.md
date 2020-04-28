@@ -18,6 +18,9 @@ In the future it should also be possible that service technicans can get access 
 
 ![architecture.png](assets/architecture.png "Architecture")
 
+All the services are deployed and configured using Terraform scripts which makes it easy to reproduce the entire infrastrucure by simply running these scripts. In case of any problems you can easily spin up a totally fresh infrastructure within minutes and make this new system your production environment. The entire configuration is stored in Terraform Cloud, because the Terraform state files need to be synchronized between all the developers. These state files contain very sensitive data so they should never stay on the local machine and they are completely encrypted before they are uploaded to Terraform Cloud.
+
+As part of the Terraform deployment I'm also using the Helm package manager for Kubernetes. I'm using the new Helm version 3 because this version doesn't need Tiller anymore. Tiller was always a security issue within the Kubernetes cluster because it required a very privilidged service account.
 
 ## Threat modelling
 
@@ -262,10 +265,19 @@ Sentry is a SaaS tool which lets you easily collect all crashes of your applicat
 Setting up Sentry for the Kotlin based services is pretty easy, I only have to [include the SDK in the `build.gradle`](https://github.com/henrikengelbrink/se09-user-service/blob/master/build.gradle#L37) file and provide the [environment variable `SENTRY_DSN`](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/user-service.tf#L74-L77) to authenticate the client. There are no further configurations necessary and every exception including the stacktrace will be automatically collected in their service. It is also possible to host the Sentry server in your own infrastructure but I'm currently using their SaaS solution.
 
 ## 7.2 Application Performance Monitoring
+Application Performance Monitoring enables you to track everything happening inside your service, for examples you can track every part of an incoming HTTP request of a REST API like receiving and parsing the request, handling the request, running queries to external databases and send the response to the client. For every of these step you can monitor CPU and memory usage, the time it take or any other metric. APM offers a lot of possibilites to monitor the status of your application and to optimize it and find possible bottlenecks before they become critical for your user/system.
 
-## 7.3 Collect logs with the Elastic stack
+Unfortunately I didn't found time to add this feature to my project, but there are SaaS solutions like DataDog or NewRelic available and by adding their agent to your services, it is pretty easy to use APM. Furthermore, Elastic, the company behind the Elastic Stack, also offers a open source solutions for this. Elastic APM can be used for free and is deployed in your own infrastrucutre or you can use their cloud service as well. Elatic APM requires a little bit more time to configure but it is cheaper and you own all the data.
+
+## 7.3 Collect logs with the Elastic Stack
+The Elastic Stack offers the possibility to collect all logs from different services running in the Kubernetes cluster at one single point. This is very helpful to see problems in advance and always get an overview of the status of the entire system. Furthermore, these logs can help to find useful data during the post-mortem of any (security) incident.
+
+The Elastic Stack is [deployed into Kubernetes using the official Helm charts](https://github.com/henrikengelbrink/se09_infrastructure/blob/master/L3_Services/elastic.tf). It consists out of different services: Elasticsearch which is the database where the entire logs are stored, Filebeat which reads all the logs(log-files) from Kubernetes and pushes them into the Elasticsearch database, Metricbeat is collecting metrics of the Kubernetes cluster itself and Kibana offers the possibility to visualize all the gathered data to in different dashboards. Furthermore there are some additional services like alerting services which send SMS/Slack message for specific events or when specific thresholdes are passed.
+
+By collecting all these logs it is for example possible to track all failed login attempts during a specific time period in order to recognize possible attacks against your system.
 
 ## 7.4 Collect metrics with Prometheus
+
 
 ## 7.5 Traffic management with Kiali
 
