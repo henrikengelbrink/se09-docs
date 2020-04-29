@@ -202,6 +202,8 @@ At the moment I am only using the iOS application and the login/register views a
 
 # 4. IoT security
 
+The Internet of Things device I am using for this project is an ESP32 microcontroller with Mongoose OS installed. The development of the firmware on Mongoose OS is done in C. IoT devices are often abused mby hackers and they often become parts of huge botnets because they were not secured sufficiently. In the next sections I will describe all the steps I took in order to increase the security of my IoT device and the communication from the device to the backend.
+
 ## 4.1 MQTT broker
 The communication with the Iot devices is handled via the MQTT protocol. MQTT is a protocol which is based on clients that publish/subscribe for specific topics at the MQTT broker which is the central element of the MQTT system where all messages are processed. I am using the [VerneMQ](https://vernemq.com/) MQTT broker which is written in Erlang and completely open source.
 
