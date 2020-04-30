@@ -161,14 +161,27 @@ At the moment I have implemented the authorization logic into each service I hav
 
 A better solution would be to use a specific access control server which is connected to the Ory Oathkeeper proxy to automatically check these things for every incoming request. This will result in one single service where all the configurations need to be implemented. The Ory project is offering a service called Keto for this, but it is still in beta status and a lot of functionalities are still missing, but in the future, this would be the way I would handle authorization. Keto is supposed to use access control patterns like Role-Based-Access-Control (RBAC), Attribute-Based-Access-Control (ABAC), or Access-Control-Lists (ACL).
 
-## 3.3 Bcrypt for salted and hashed passwords
+## 3.3 Password security
+Password security is one crucial part of a secure application because if attackers get access to user passwords or they can brute-force them easily, private user data may be leaked and abused by an attacker. Whenever a new user signs up for the application he needs to choose a [password that matches the following requirements](https://github.com/henrikengelbrink/se09-user-service/blob/master/src/main/kotlin/se09/user/service/utils/Regex.kt):
+
+- first digit letter or special character
+- a digit must occur at least once
+- a lower case letter must occur at least once
+- an upper case letter must occur at least once
+- a special character must occur at least once
+- last digit letter or number
+- at least 16 digits long
+
+Furthermore, I added some additional security measures to increase password security.
+
+## 3.3.1 Bcrypt for salted and hashed passwords
 It is a common problem that there are still applications and services which store password into the database in plaintext which means as soon a hacker gains access to a database, he can read and use all the user passwords. Even if this is a problem since the beginning of the internet and every developer should know about this, you can read about data leaks with plaintext passwords weekly.
 
 I decided to use the bcrypt algorithm to hash and salt the passwords I am storing in the database with my user-service. Bcrypt is using a random and securely generated Salt which is added to the hash of the actual password. This makes it impossible for the attacker to use Rainbow/lookup tables to crack the password. Furthermore, bcrypt is using an algorithm that makes the hash-function slower. This makes brute-forcing millions of passwords nearly impossible (until the hacker has a lot of computational power) because it would take too much time.
 
 - https://auth0.com/blog/hashing-in-action-understanding-bcrypt/
 
-## 3.4 HaveIBeenPwned service
+## 3.3.2 HaveIBeenPwned service
 The developer Troy Hunt started a project called [*HaveIBeenPwned*(https://haveibeenpwned.com/) where he collects data from password leaks. At the moment the project contains over 550 million leaked passwords. Commonly, hackers are using data from prior leaks and use them to get access to other services with this data or they are using these very common passwords to brute force other services. As a developer, you can use the data of *HaveIBeenPwned* and check every new user password against this data collection and if the new password of the user appears in *HaveIBeenPwned* you can tell him to use another password.
 
 I have downloaded the entire HIBP data as a CSV file, created a bloom filter out of it, and implemented a REST API that uses this bloom filter to check if a password was already leaked. On every new user registration, [the user-service is checking](https://github.com/henrikengelbrink/se09-user-service/blob/master/src/main/kotlin/se09/user/service/services/UserService.kt#L29-L31) the password of the user with the [hibp-service](https://github.com/henrikengelbrink/se09-docker-images/tree/master/hibp).
@@ -178,18 +191,18 @@ I have downloaded the entire HIBP data as a CSV file, created a bloom filter out
 - https://github.com/adewes/have-i-been-bloomed/blob/master/Makefile
 - https://github.com/adewes/bloom
 
-## 3.5 SQL injections
+## 3.4 SQL injections
 SQL injections are nothing I have to actively care about in this project because I am using an ORM in all services that are using some SQL. I am not writing any SQL statements because the ORM is building all the queries and it also takes care of escaping queries to prevent SQL injections.
 
 - https://owasp.org/www-community/attacks/SQL_Injection
 
-## 3.6 Cross-Origin Resource Sharing (CORS)
+## 3.5 Cross-Origin Resource Sharing (CORS)
 CORS is a way to restrict which web services with a different host can access your backend. By default, a web app like `https://example-a.com` can not reach a backend `https://api-b.com` because of the same-origin policy which is applied. To allow a request like this, you have to define a specific CORS header in the backend so that the web app can request data from the backend. At the moment I have only implemented the iOS app which is communicating to my backend services and no web app is running in a browser, so there is no need to define these CORS configurations. If this is going to change in the future, I would add these configurations in the Ambassador Edge Stack configuration. In this configuration, I can define headers which should be added to each response which is going back to the client from the backend.
 
 - https://auth0.com/blog/cors-tutorial-a-guide-to-cross-origin-resource-sharing/
 - https://www.codecademy.com/articles/what-is-cors
 
-## 3.7 Cross-Site-Request-Forgery (CSRF)
+## 3.6 Cross-Site-Request-Forgery (CSRF)
 As soon as the user logged into your application, you can store the login state into a cookie. This cookie is sent with every request to the backend to authenticate the user so that he only needs to log in once for a specific time range. This can be abused by an attacker. The attacker can implement his site where he is executing an unintended request  from his site to your backend. This happens without the user knowing about it and because of the existing cookie, the request can potentially result in some malicious/unwanted changes in the backend. To prevent this kind of attack, you can add a CSRF token to every webpage which is additionally sent with each request to the backend and then validated in the backend.
 
 At the moment I am only using the iOS application and the internal UIWebView/WKWebView I am using does not store any cookies and is sandboxed, so no third-party may be executing unintended requests with some stored cookies.
@@ -197,7 +210,7 @@ At the moment I am only using the iOS application and the internal UIWebView/WKW
 - https://auth0.com/docs/protocols/oauth2/mitigate-csrf-attacks
 - https://developers.shopware.com/developers-guide/csrf-protection
 
-## 3.8 Cross-Site Scripting (XSS)
+## 3.7 Cross-Site Scripting (XSS)
 XSS attacks are based on the fact, that an attacker can inject malicious code into a web application by executing, for example, JavaScript from input fields. To prevent these kinds of attacks it is necessary to validate and escape every user input to be sure that no injected code is executed. 
 
 At the moment I am only using the iOS application and the login/register views are handled by the AppAuth framework. The AppAuth framework is the only possibility to open these pages and an attacker does not need to inject some malicious inputs.
