@@ -172,7 +172,7 @@ Password security is one crucial part of a secure application because if attacke
 - last digit letter or number
 - at least 16 digits long
 
-Furthermore, I added some additional security measures to increase password security.
+Furthermore, I added some additional security measures to increase password security which are described in the next two sections.
 
 ## 3.3.1 Bcrypt for salted and hashed passwords
 It is a common problem that there are still applications and services which store password into the database in plaintext which means as soon a hacker gains access to a database, he can read and use all the user passwords. Even if this is a problem since the beginning of the internet and every developer should know about this, you can read about data leaks with plaintext passwords weekly.
