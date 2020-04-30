@@ -240,7 +240,13 @@ Mongoose OS offers the functionality to encrypt the firmware and all other files
 - https://mongoose-os.com/docs/mongoose-os/userguide/security.md
 - https://www.nexusgroup.com/how-to-validate-certificates-in-iot-devices-5/
 
-## 4.4 User-Claim-Device flow
+## 4.4 Creating new devices in the backend from the production line
+
+During the production of the IoT device, it is necessary to register the device in the backend and issue certificates for it. These certificates are then copied onto the device together with the firmware because they are needed to connect to the MQTT broker. The following sequence diagram explains this process:
+
+![UML_Device_Factory.png](assets/UML_Device_Factory.png "Create new devices from the factory")
+
+## 4.5 User-Claim-Device flow
 
 The following sequence diagram explains the process of claiming a new device for a user:
 
