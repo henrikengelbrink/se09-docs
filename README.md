@@ -240,6 +240,12 @@ Mongoose OS offers the functionality to encrypt the firmware and all other files
 - https://mongoose-os.com/docs/mongoose-os/userguide/security.md
 - https://www.nexusgroup.com/how-to-validate-certificates-in-iot-devices-5/
 
+## 4.4 User-Claim-Device flow
+
+The following sequence diagram explains the process of claiming a new device for a user:
+
+![iot-device-claim.png](assets/iot-device-claim.png "User-Claim-Device flow")
+
 <br/><br/>
 
 # 5. Mobile security
